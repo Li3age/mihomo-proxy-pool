@@ -29,7 +29,7 @@ class Config:
         self.path = Path(path)
         self.data = DEFAULT_CONFIG.copy()
         if self.path.exists():
-            with open(self.path) as f:
+            with open(self.path, encoding="utf-8") as f:
                 loaded = json.load(f)
                 self._deep_update(self.data, loaded)
 
@@ -41,7 +41,7 @@ class Config:
                 base[k] = v
 
     def save(self):
-        with open(self.path, "w") as f:
+        with open(self.path, "w", encoding="utf-8") as f:
             json.dump(self.data, f, indent=2, ensure_ascii=False)
 
     @property

@@ -29,10 +29,10 @@ class MihomoClient:
                     return {}
                 return json.loads(raw)
         except urllib.error.HTTPError as e:
-            log.error("Mihomo API error: %s %s", e.code, e.reason)
+            log.debug("Mihomo API error: %s %s", e.code, e.reason)
             raise
         except urllib.error.URLError as e:
-            log.error("Mihomo connection error: %s", e.reason)
+            log.debug("Mihomo connection error: %s", e.reason)
             raise
 
     def health_check(self) -> bool:

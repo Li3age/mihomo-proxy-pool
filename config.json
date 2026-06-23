@@ -10,7 +10,7 @@
   "pool": {
     "group": "ProxyPool",
     "strategy": "round-robin",
-    "auto_rotate_interval": 300,
+    "auto_rotate_interval": 10,
     "exclude_keywords": [
       "剩余流量",
       "套餐到期",

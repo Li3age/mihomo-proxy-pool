@@ -29,8 +29,6 @@ _project_root: Path = None
 MIHOMO_PROXY_PORT = 7892
 MIHOMO_API_PORT = 9092
 
-# Existing proxy for fetching subscription
-EXISTING_PROXY = "http://127.0.0.1:7890"
 
 
 # ──────────────────── Web GUI ────────────────────
@@ -194,13 +192,12 @@ def _regenerate_mihomo_config():
         proxies = []
     else:
         try:
-            log.info("Fetching subscription via existing proxy...")
+            log.info("Fetching subscription...")
             insecure = config.data.get("insecure_tls", False)
-            raw = fetch_subscription(sub_url, proxy=EXISTING_PROXY, insecure=insecure)
+            raw = fetch_subscription(sub_url, proxy=None, insecure=insecure)
             proxies = parse_proxies(raw)
         except Exception as e:
-            log.error("Failed to fetch/parse subscription: %s", e)
-            # Try to keep using previous config if exists
+            log.warning("Cannot fetch subscription (network not ready): %s", e)
             if runtime_path.exists():
                 log.info("Keeping existing runtime config")
                 return
@@ -208,23 +205,45 @@ def _regenerate_mihomo_config():
 
     content = generate_runtime_config(str(template_path), proxies)
 
-    with open(runtime_path, "w") as f:
+    with open(runtime_path, "w", encoding="utf-8") as f:
         f.write(content)
 
     log.info("Generated runtime config with %d proxies at %s", len(proxies), runtime_path)
 
 
-def _start_mihomo():
+def _ensure_mihomo():
+    """Start mihomo, or reuse an existing one if already running."""
     global mihomo_proc
     binary = _project_root / config.mihomo["binary"].lstrip("./")
+    if sys.platform == "win32":
+        binary_exe = binary.with_suffix(binary.suffix + ".exe")
+        if binary_exe.exists():
+            binary = binary_exe
     work_dir = _project_root / config.mihomo["work_dir"].lstrip("./")
     runtime_config = _project_root / config.mihomo["runtime_config"].lstrip("./")
 
     if not binary.exists():
         log.error("Mihomo binary not found at %s. Run bin/download.sh first.", binary)
-        return
+        return False
 
-    secret = config.mihomo.get("api_secret") or secrets.token_hex(16)
+    api_url = f"http://127.0.0.1:{MIHOMO_API_PORT}"
+    saved_secret = config.mihomo.get("api_secret") or ""
+
+    # Try to talk to an existing mihomo first
+    if saved_secret:
+        try:
+            mc = MihomoClient(api_url, saved_secret)
+            mc._req("GET", "/version")
+            log.info("Reusing existing mihomo on port %d", MIHOMO_API_PORT)
+            return True
+        except Exception:
+            log.debug("No existing mihomo, starting fresh...")
+
+    # Kill any stale process on our port
+    _kill_stale_mihomo()
+
+    # Generate a fresh secret
+    secret = secrets.token_hex(16)
     config.mihomo["api_secret"] = secret
     config.save()
 
@@ -240,18 +259,39 @@ def _start_mihomo():
     mihomo_proc = subprocess.Popen(
         cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
     )
+    return True
 
 
 def _restart_mihomo():
     global mihomo_proc, rotator
     _regenerate_mihomo_config()
-    if mihomo_proc:
-        mihomo_proc.terminate()
-        try:
-            mihomo_proc.wait(timeout=5)
-        except subprocess.TimeoutExpired:
-            mihomo_proc.kill()
-    _start_mihomo()
+    _stop_mihomo()
+    _ensure_mihomo()
+
+
+def _kill_stale_mihomo():
+    """Kill any process listening on our API port."""
+    import platform
+    try:
+        if platform.system() == "Windows":
+            subprocess.run(
+                ['powershell', '-NoProfile', '-Command',
+                 f"Get-NetTCPConnection -LocalPort {MIHOMO_API_PORT} -ErrorAction SilentlyContinue | "
+                 f"ForEach-Object {{ Stop-Process -Id $_.OwningProcess -Force }}"],
+                capture_output=True, timeout=10
+            )
+        else:
+            subprocess.run(
+                ['fuser', '-k', f'{MIHOMO_API_PORT}/tcp'],
+                capture_output=True, timeout=5
+            )
+    except Exception:
+        pass
+    time.sleep(1)
+
+
+def _start_mihomo():
+    _ensure_mihomo()
 
 
 def _stop_mihomo():
@@ -267,13 +307,24 @@ def _stop_mihomo():
 
 
 def _wait_for_mihomo(timeout: float = 30) -> bool:
+    """Wait until mihomo API is up AND proxy groups are loaded."""
     deadline = time.time() + timeout
+    group = config.pool["group"]
     while time.time() < deadline:
+        if mihomo_proc and mihomo_proc.poll() is not None:
+            log.error("Mihomo exited with code %s", mihomo_proc.returncode)
+            return False
         try:
-            rotator.mihomo._req("GET", "/version")
-            return True
+            resp = rotator.mihomo._req("GET", "/version")
+            if not resp:
+                time.sleep(1)
+                continue
+            g = rotator.mihomo.get_group(group)
+            if g and g.get("all"):
+                return True
         except Exception:
-            time.sleep(1)
+            pass
+        time.sleep(1)
     return False
 
 
@@ -294,10 +345,12 @@ def create_app(proj_root: Path) -> Flask:
     # regenerate runtime config (fetches subscription via existing proxy)
     _regenerate_mihomo_config()
 
-    # start mihomo
-    _start_mihomo()
+    # start or reuse mihomo
+    if not _ensure_mihomo():
+        log.error("Failed to start mihomo")
+        sys.exit(1)
 
-    # init API client (needed for health check)
+    # init API client
     api_url = f"http://127.0.0.1:{MIHOMO_API_PORT}"
     mihomo = MihomoClient(api_url, config.mihomo["api_secret"])
     rotator = Rotator(

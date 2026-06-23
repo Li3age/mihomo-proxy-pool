@@ -270,11 +270,11 @@ async function init() {
     await Promise.all([loadStatus(), loadNodes(), loadHistory()]);
 }
 
-// Poll every 10s
+// Poll every 15s
 setInterval(() => {
     loadStatus();
     loadNodes();
-}, 10000);
+}, 15000);
 
 // Poll history every 30s
 setInterval(loadHistory, 30000);

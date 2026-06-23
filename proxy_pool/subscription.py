@@ -10,29 +10,30 @@ import os
 log = logging.getLogger(__name__)
 
 
-def fetch_subscription(url: str, proxy: str = "", timeout: int = 30, insecure: bool = False) -> str:
+def fetch_subscription(url: str, proxy: str = "", timeout: int = 15, insecure: bool = False) -> str:
     """Fetch subscription content via optional proxy. Returns raw YAML text."""
     ctx = ssl.create_default_context()
     if insecure:
         ctx.check_hostname = False
         ctx.verify_mode = ssl.CERT_NONE
 
+    handlers = []
     if proxy:
-        # Use existing proxy to fetch subscription
-        os.environ["http_proxy"] = proxy
-        os.environ["https_proxy"] = proxy
+        handlers.append(urllib.request.ProxyHandler({"http": proxy, "https": proxy}))
+    handlers.append(urllib.request.HTTPSHandler(context=ctx))
+    opener = urllib.request.build_opener(*handlers)
 
     try:
         req = urllib.request.Request(
             url,
             headers={"User-Agent": "clash-verge/1.0"},
         )
-        with urllib.request.urlopen(req, timeout=timeout, context=ctx) as resp:
+        with opener.open(req, timeout=timeout) as resp:
             raw = resp.read().decode("utf-8", errors="replace")
             log.info("Fetched subscription: %d bytes", len(raw))
             return raw
     except Exception as e:
-        log.error("Failed to fetch subscription: %s", e)
+        log.warning("Failed to fetch subscription: %s", e)
         raise
 
 
@@ -69,7 +70,7 @@ def parse_proxies(raw_yaml: str) -> list[dict]:
 
 def generate_runtime_config(template_path: str, proxies: list[dict]) -> str:
     """Insert inline proxies into the config template."""
-    with open(template_path) as f:
+    with open(template_path, encoding="utf-8") as f:
         content = f.read()
 
     # Build proxy name list for the ProxyPool group
