@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Proxy Pool — mihomo-proxy-pool</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header class="topbar">
+        <div class="logo">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"/>
+                <path d="M12 2a10 10 0 0 1 0 20"/>
+                <path d="M2 12h20"/>
+            </svg>
+            <span>Proxy Pool</span>
+        </div>
+        <div class="status-bar">
+            <span id="conn-status" class="badge">● 连接中...</span>
+            <span class="proxy-addr">127.0.0.1:7892</span>
+        </div>
+    </header>
+
+    <main class="container">
+        <!-- Current Node Card -->
+        <section class="card current-node-card">
+            <div class="card-header">
+                <h2>当前节点</h2>
+                <span id="auto-badge" class="badge badge-auto" style="display:none">🔄 自动轮转中</span>
+            </div>
+            <div class="current-node-body">
+                <div class="node-flag" id="node-flag">🌐</div>
+                <div class="node-info">
+                    <div class="node-name" id="current-name">--</div>
+                    <div class="node-meta">
+                        <span id="current-type"></span>
+                        <span id="current-delay">-- ms</span>
+                        <span id="current-alive"></span>
+                    </div>
+                </div>
+                <button class="btn btn-primary btn-lg" onclick="rotateNode()">
+                    🔄 换一个
+                </button>
+            </div>
+        </section>
+
+        <!-- Controls Panel -->
+        <section class="card controls-card">
+            <div class="card-header"><h2>轮转控制</h2></div>
+            <div class="controls-body">
+                <div class="control-row">
+                    <label>轮转策略</label>
+                    <select id="strategy-select" onchange="updateStrategy()">
+                        <option value="round-robin">顺序轮转 (Round-Robin)</option>
+                        <option value="random">随机 (Random)</option>
+                    </select>
+                </div>
+                <div class="control-row">
+                    <label>自动轮转</label>
+                    <div class="toggle-group">
+                        <button id="auto-toggle" class="btn btn-sm" onclick="toggleAuto()">开启</button>
+                        <input type="number" id="interval-input" value="300" min="10" max="3600"
+                               onchange="updateInterval()" style="width:80px">
+                        <span class="unit">秒</span>
+                    </div>
+                </div>
+                <div class="control-row">
+                    <label>排除关键词</label>
+                    <input type="text" id="exclude-input" placeholder="逗号分隔"
+                           onchange="updateExclude()">
+                </div>
+            </div>
+        </section>
+
+        <!-- Node List -->
+        <section class="card nodes-card">
+            <div class="card-header">
+                <h2>节点列表</h2>
+                <span id="node-count" class="badge">0 个节点</span>
+            </div>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>节点</th>
+                            <th>类型</th>
+                            <th>延迟</th>
+                            <th>状态</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="node-table-body">
+                        <tr><td colspan="5" class="empty-msg">加载中...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- History -->
+        <section class="card history-card">
+            <div class="card-header"><h2>轮转历史</h2></div>
+            <div class="timeline" id="history-list">
+                <span class="empty-msg">暂无记录</span>
+            </div>
+        </section>
+    </main>
+
+    <script src="app.js"></script>
+</body>
+</html>

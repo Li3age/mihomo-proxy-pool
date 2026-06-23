@@ -1,0 +1,16 @@
+# mihomo binary (35MB) — use bin/download.sh
+bin/mihomo
+
+# runtime data
+runtime/
+*.pid
+*.db
+cache/
+
+# generated config
+config/runtime.yaml
+
+# python
+__pycache__/
+*.pyc
+.venv/

@@ -1,0 +1,28 @@
+{
+  "mihomo": {
+    "binary": "./bin/mihomo",
+    "api_url": "http://127.0.0.1:9092",
+    "api_secret": "",
+    "config_template": "./config/config.template.yaml",
+    "runtime_config": "./config/runtime.yaml",
+    "work_dir": "./runtime"
+  },
+  "pool": {
+    "group": "ProxyPool",
+    "strategy": "round-robin",
+    "auto_rotate_interval": 300,
+    "exclude_keywords": [
+      "剩余流量",
+      "套餐到期",
+      "过滤掉",
+      "DIRECT",
+      "REJECT"
+    ]
+  },
+  "server": {
+    "host": "127.0.0.1",
+    "port": 58080
+  },
+  "subscription_url": "",
+  "insecure_tls": true
+}
