@@ -2,21 +2,36 @@ $configPath = Join-Path $PSScriptRoot "..\config.json"
 $config = Get-Content $configPath -Raw -Encoding UTF8 | ConvertFrom-Json
 
 $current = $config.subscription_url
+
 if ($current) {
-    Write-Host "        当前订阅: $current"
-    Write-Host "        回车保持不变，输入新地址则更新"
+    Write-Host ""
+    Write-Host "  +-------------------------------------------+"
+    Write-Host "  |  Current: $current"
+    Write-Host "  +-------------------------------------------+"
+    Write-Host ""
+    Write-Host "  Press Enter to keep, or type a new URL"
 } else {
-    Write-Host "        尚未配置订阅地址"
-    Write-Host "        请输入订阅链接（可从机场/代理服务商获取）"
+    Write-Host ""
+    Write-Host "  +-------------------------------------------+"
+    Write-Host "  |  No subscription URL configured"
+    Write-Host "  |  Paste your Clash/Mihomo subscription link"
+    Write-Host "  +-------------------------------------------+"
+    Write-Host ""
 }
 
-$input = Read-Host "        订阅地址"
+$input = Read-Host "  URL"
 if ($input) {
     $config.subscription_url = $input
     $config | ConvertTo-Json -Depth 10 | Set-Content $configPath -Encoding UTF8
-    Write-Host "        已保存"
+    Write-Host ""
+    Write-Host "  [OK] Saved"
+    Write-Host ""
 } elseif ($current) {
-    Write-Host "        保持不变"
+    Write-Host ""
+    Write-Host "  [OK] Unchanged"
+    Write-Host ""
 } else {
-    Write-Host "        跳过（代理池将为空，可通过 Web 面板 http://127.0.0.1:58080 配置）"
+    Write-Host ""
+    Write-Host "  Skipped (can configure later at http://127.0.0.1:58080)"
+    Write-Host ""
 }

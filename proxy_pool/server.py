@@ -93,6 +93,8 @@ def api_settings():
             "auto_interval": rotator.auto_interval,
             "auto_running": rotator.get_status()["auto_running"],
             "exclude_keywords": rotator.exclude_keywords,
+            "filter_pattern": rotator.filter_pattern,
+            "filter_mode": rotator.filter_mode,
             "group": rotator.group,
             "subscription_url": config.subscription_url,
         })
@@ -108,6 +110,12 @@ def api_settings():
         if "subscription_url" in body and body["subscription_url"] != config.subscription_url:
             config.subscription_url = body["subscription_url"]
             need_restart = True
+        if "filter_pattern" in body or "filter_mode" in body:
+            pat = body.get("filter_pattern", rotator.filter_pattern)
+            mode = body.get("filter_mode", rotator.filter_mode)
+            rotator.set_filter(pat, mode)
+            config.pool["filter_pattern"] = pat
+            config.pool["filter_mode"] = mode
         if "exclude_keywords" in body:
             rotator.set_exclude_keywords(body["exclude_keywords"])
             config.pool["exclude_keywords"] = body["exclude_keywords"]
@@ -157,11 +165,15 @@ def _copy_mmdb():
 
     # Common mihomo/clash runtime directories
     candidates = [
-        Path.home() / "clash-for-linux" / "runtime",
         Path.home() / ".config" / "mihomo",
         Path.home() / ".local" / "share" / "mihomo",
+        Path.home() / "AppData" / "Local" / "mihomo",
+        Path.home() / "AppData" / "Roaming" / "mihomo",
+        Path.home() / "clash-for-linux" / "runtime",
+        Path.home() / "clash-verge" / "runtime",
         Path("/opt/mihomo"),
         Path("/etc/mihomo"),
+        _project_root / "bin",
     ]
 
     for fname in ["Country.mmdb", "geoip.metadb", "GeoLite2-ASN.mmdb",
@@ -357,8 +369,10 @@ def create_app(proj_root: Path) -> Flask:
         mihomo=mihomo,
         group=config.pool["group"],
         strategy=config.pool["strategy"],
-        auto_interval=config.pool["auto_rotate_interval"],
-        exclude_keywords=config.pool["exclude_keywords"],
+        auto_interval=config.pool.get("auto_rotate_interval", 300),
+        exclude_keywords=config.pool.get("exclude_keywords", []),
+        filter_pattern=config.pool.get("filter_pattern", ""),
+        filter_mode=config.pool.get("filter_mode", "fuzzy"),
     )
 
     log.info("Waiting for mihomo API to be ready...")

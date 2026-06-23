@@ -1,5 +1,6 @@
 """Proxy rotation engine."""
 
+import re
 import threading
 import time
 import random
@@ -20,20 +21,41 @@ class Rotator:
         strategy: str = "round-robin",
         auto_interval: int = 300,
         exclude_keywords: list[str] | None = None,
+        filter_pattern: str = "",
+        filter_mode: str = "fuzzy",
     ):
         self.mihomo = mihomo
         self.group = group
         self.strategy = strategy
         self.auto_interval = auto_interval
         self.exclude_keywords = exclude_keywords or []
+        self.filter_pattern = filter_pattern
+        self.filter_mode = filter_mode  # "fuzzy" | "regex"
+        self._filter_re: re.Pattern | None = None
+        self._compile_filter()
         self._lock = threading.RLock()
         self._index = 0
         self._proxies: list[str] = []
+        self._all_proxies: list[str] = []  # before filter
         self._current: str = ""
         self._history: deque[dict] = deque(maxlen=100)
         self._auto_timer: threading.Timer | None = None
         self._running = False
         self._last_rotate: float = 0
+
+    def _compile_filter(self):
+        if not self.filter_pattern:
+            self._filter_re = None
+            return
+        try:
+            if self.filter_mode == "regex":
+                self._filter_re = re.compile(self.filter_pattern, re.IGNORECASE)
+            else:
+                escaped = re.escape(self.filter_pattern)
+                self._filter_re = re.compile(escaped, re.IGNORECASE)
+        except re.error:
+            log.warning("Invalid filter pattern: %s", self.filter_pattern)
+            self._filter_re = None
 
     def _is_valid(self, name: str) -> bool:
         for kw in self.exclude_keywords:
@@ -41,12 +63,18 @@ class Rotator:
                 return False
         return True
 
+    def _matches_filter(self, name: str) -> bool:
+        if not self._filter_re:
+            return True
+        return bool(self._filter_re.search(name))
+
     def refresh(self) -> list[str]:
         """Refresh proxy list from mihomo."""
         data = self.mihomo.get_group(self.group)
         all_proxies = data.get("all", [])
         with self._lock:
-            self._proxies = [p for p in all_proxies if self._is_valid(p)]
+            self._all_proxies = [p for p in all_proxies if self._is_valid(p)]
+            self._proxies = [p for p in self._all_proxies if self._matches_filter(p)]
             self._current = data.get("now", self._current)
         return self._proxies
 
@@ -126,12 +154,15 @@ class Rotator:
             return {
                 "current": self._current,
                 "pool_size": len(self._proxies),
+                "total_nodes": len(self._all_proxies),
                 "proxies": self._proxies,
                 "strategy": self.strategy,
                 "group": self.group,
                 "auto_interval": self.auto_interval,
                 "auto_running": self._running,
                 "last_rotate": self._last_rotate,
+                "filter_pattern": self.filter_pattern,
+                "filter_mode": self.filter_mode,
             }
 
     def get_history(self) -> list[dict]:
@@ -148,6 +179,13 @@ class Rotator:
         if self._running:
             self.stop_auto()
             self.start_auto()
+
+    def set_filter(self, pattern: str, mode: str = "fuzzy"):
+        with self._lock:
+            self.filter_pattern = pattern
+            self.filter_mode = mode
+            self._compile_filter()
+        self.refresh()
 
     def set_exclude_keywords(self, keywords: list[str]):
         with self._lock:

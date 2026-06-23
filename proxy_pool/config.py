@@ -18,6 +18,8 @@ DEFAULT_CONFIG = {
         "strategy": "round-robin",
         "auto_rotate_interval": 300,
         "exclude_keywords": ["剩余流量", "套餐到期", "过滤掉", "DIRECT", "REJECT"],
+        "filter_pattern": "",
+        "filter_mode": "fuzzy",
     },
     "server": {"host": "127.0.0.1", "port": 58080},
     "subscription_url": "",
@@ -29,7 +31,7 @@ class Config:
         self.path = Path(path)
         self.data = DEFAULT_CONFIG.copy()
         if self.path.exists():
-            with open(self.path, encoding="utf-8") as f:
+            with open(self.path, encoding="utf-8-sig") as f:
                 loaded = json.load(f)
                 self._deep_update(self.data, loaded)
 
@@ -41,7 +43,7 @@ class Config:
                 base[k] = v
 
     def save(self):
-        with open(self.path, "w", encoding="utf-8") as f:
+        with open(self.path, "w", encoding="utf-8-sig") as f:
             json.dump(self.data, f, indent=2, ensure_ascii=False)
 
     @property

@@ -107,6 +107,8 @@ select, input[type="number"], input[type="text"] {
     padding: 6px 10px; font-size: 13px; outline: none;
 }
 select:focus, input:focus { border-color: var(--accent); }
+#filter-input { width: 140px; }
+#filter-mode { width: 70px; font-size: 12px; }
 
 /* ── Table ── */
 .table-wrap { overflow-x: auto; }

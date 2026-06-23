@@ -66,6 +66,17 @@
                     </div>
                 </div>
                 <div class="control-row">
+                    <label>过滤范围</label>
+                    <div class="toggle-group">
+                        <input type="text" id="filter-input" placeholder="如: 香港 或 ^日本"
+                               onchange="updateFilter()">
+                        <select id="filter-mode" onchange="updateFilter()" style="width:auto">
+                            <option value="fuzzy">模糊</option>
+                            <option value="regex">正则</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="control-row">
                     <label>排除关键词</label>
                     <input type="text" id="exclude-input" placeholder="逗号分隔"
                            onchange="updateExclude()">

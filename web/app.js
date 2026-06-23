@@ -144,6 +144,18 @@ async function updateInterval() {
     });
 }
 
+async function updateFilter() {
+    const pattern = $('#filter-input').value.trim();
+    const mode = $('#filter-mode').value;
+    await fetchJSON(`${API}/settings`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ filter_pattern: pattern, filter_mode: mode }),
+    });
+    loadStatus();
+    loadNodes();
+}
+
 async function updateExclude() {
     const raw = $('#exclude-input').value;
     const keywords = raw.split(',').map(s => s.trim()).filter(Boolean);
@@ -176,6 +188,15 @@ function updateStatusUI(data) {
         $('#auto-badge').style.display = '';
     } else {
         $('#auto-badge').style.display = 'none';
+    }
+
+    // show filter scope: "12/27 个节点"
+    const total = data.total_nodes || data.pool_size;
+    const pool = data.pool_size;
+    if (data.filter_pattern) {
+        $('#node-count').textContent = `${pool} / ${total} 个节点 (已过滤)`;
+    } else {
+        $('#node-count').textContent = `${pool} 个节点`;
     }
 }
 
@@ -249,6 +270,8 @@ function updateSettingsUI(data) {
     $('#strategy-select').value = data.strategy || 'round-robin';
     $('#interval-input').value = data.auto_interval || 300;
     $('#exclude-input').value = (data.exclude_keywords || []).join(', ');
+    $('#filter-input').value = data.filter_pattern || '';
+    $('#filter-mode').value = data.filter_mode || 'fuzzy';
     updateAutoToggle(data.auto_running);
 }
 

@@ -17,7 +17,9 @@
       "过滤掉",
       "DIRECT",
       "REJECT"
-    ]
+    ],
+    "filter_pattern": "",
+    "filter_mode": "fuzzy"
   },
   "server": {
     "host": "127.0.0.1",
