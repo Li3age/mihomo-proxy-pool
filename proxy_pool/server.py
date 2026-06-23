@@ -153,18 +153,30 @@ def api_health():
 
 
 def _copy_mmdb():
-    """Copy MMDB files from existing mihomo installation."""
-    src_dir = Path("/home/li3age/clash-for-linux/runtime")
+    """Copy MMDB files from common mihomo installation locations."""
     dst_dir = _project_root / config.mihomo["work_dir"].lstrip("./")
     dst_dir.mkdir(parents=True, exist_ok=True)
 
+    # Common mihomo/clash runtime directories
+    candidates = [
+        Path.home() / "clash-for-linux" / "runtime",
+        Path.home() / ".config" / "mihomo",
+        Path.home() / ".local" / "share" / "mihomo",
+        Path("/opt/mihomo"),
+        Path("/etc/mihomo"),
+    ]
+
     for fname in ["Country.mmdb", "geoip.metadb", "GeoLite2-ASN.mmdb",
                    "GeoIP.dat", "GeoSite.dat"]:
-        src = src_dir / fname
         dst = dst_dir / fname
-        if src.exists() and not dst.exists():
-            shutil.copy2(src, dst)
-            log.info("Copied %s to runtime/", fname)
+        if dst.exists():
+            continue
+        for src_dir in candidates:
+            src = src_dir / fname
+            if src.exists():
+                shutil.copy2(src, dst)
+                log.info("Copied %s to runtime/", fname)
+                break
 
 
 def _regenerate_mihomo_config():
