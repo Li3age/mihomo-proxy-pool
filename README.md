@@ -1,77 +1,61 @@
 # mihomo-proxy-pool
 
-Turn your [mihomo](https://github.com/MetaCubeX/mihomo) proxy into a **rotating proxy pool** with a Web GUI.
+基于 [mihomo](https://github.com/MetaCubeX/mihomo) 制作的 **代理池**，附带 Web 管理面板。
 
-```
-┌─────────────────────────────────────────┐
-│  Web GUI (http://127.0.0.1:58080)       │
-│  ┌──────┐ ┌──────┐ ┌──────────────┐    │
-│  │ Node │ │Rotate│ │  Node Table  │    │
-│  │ Card │ │Ctrls │ │              │    │
-│  └──────┘ └──────┘ └──────────────┘    │
-├─────────────────────────────────────────┤
-│  proxy_pool (Python)                    │
-│  Rotator → Mihomo REST API (:9091)     │
-├─────────────────────────────────────────┤
-│  mihomo (:7891 proxy, :9091 API)       │
-│  mode: global, proxy-providers: sub    │
-└─────────────────────────────────────────┘
-```
+## 特性
 
-## Features
+- **Web 面板** — 暗色主题仪表盘，监控和控制代理池
+- **自动轮转** — 支持顺序轮转 (round-robin) 和随机 (random)，可配置间隔
+- **节点健康** — 跳过离线节点，按延迟排序
+- **订阅拉取** — 从订阅 URL 自动拉取节点，定期更新
+- **独立实例** — 不干扰你日常使用的代理
 
-- **Web GUI** — dark-themed dashboard to monitor and control the pool
-- **Auto rotation** — round-robin or random, configurable interval
-- **Node health** — skip dead nodes, sort by latency
-- **Subscription-based** — auto-update nodes from your provider
-- **Independent instance** — doesn't interfere with your daily proxy
-
-## Quick Start
+## 快速开始
 
 ```bash
-# 1. Install mihomo binary
+# 1. 安装 mihomo 二进制
 bash bin/download.sh
 
-# 2. Set your subscription URL
-#    Edit config.json → set "subscription_url"
+# 2. 配置订阅 URL
+#    编辑 config.json → 设置 "subscription_url"
 
-# 3. Start
+# 3. 启动
 bash start.sh
 ```
 
-Then open **http://127.0.0.1:58080**
+启动后打开 **http://127.0.0.1:58080**
 
-Proxy address: **127.0.0.1:7891** (HTTP + SOCKS5)
+代理地址: **127.0.0.1:7892** (HTTP + SOCKS5)
 
-## Port Layout
+## 端口说明
 
-| Port | Service |
-|------|---------|
-| 7891 | HTTP + SOCKS5 proxy |
-| 9091 | Mihomo REST API |
-| 58080 | Proxy Pool Web GUI |
+| 端口 | 服务 |
+|------|------|
+| 7892 | HTTP + SOCKS5 代理 |
+| 9092 | Mihomo REST API |
+| 58080 | 代理池 Web 管理面板 |
 
 ## API
 
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/api/status` | Pool status (current node, strategy, pool size) |
-| GET | `/api/nodes` | All nodes with delay and health |
-| POST | `/api/rotate` | Rotate to next proxy |
-| POST | `/api/switch?name=...` | Switch to a specific node |
-| GET/PUT | `/api/settings` | View/update rotation settings |
-| POST | `/api/auto-rotate` | Start/stop auto rotation |
-| GET | `/api/history` | Rotation history |
-| GET | `/api/health` | Health check |
+| 方法 | 路径 | 说明 |
+|--------|------|------|
+| GET | `/api/status` | 代理池状态（当前节点、策略、池大小） |
+| GET | `/api/nodes` | 所有节点及延迟和存活状态 |
+| POST | `/api/rotate` | 轮转到下一个代理节点 |
+| POST | `/api/switch?name=...` | 切换到指定节点 |
+| GET/PUT | `/api/settings` | 查看/更新轮转设置 |
+| POST | `/api/auto-rotate` | 启动/停止自动轮转 |
+| GET | `/api/history` | 轮转历史记录 |
+| GET | `/api/health` | 健康检查 |
 
-## Usage in scripts
+## 脚本调用示例
 
 ```bash
-# Rotate to a new IP
+# 换 IP
 curl -X POST http://127.0.0.1:58080/api/rotate
 
-# Use the proxy
-curl -x http://127.0.0.1:7891 https://httpbin.org/ip
+# 使用代理
+curl -x http://127.0.0.1:7892 https://httpbin.org/ip
 ```
 
 ## License
